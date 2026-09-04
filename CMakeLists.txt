@@ -168,6 +168,21 @@ message(STATUS "Is plugin system enabled? ${INTERNAL_ENABLE_BLOCK_PLUGINS}")
 
 set_project_warnings(gnuradio-options)
 
+if(MSVC)
+  target_compile_options(
+    gnuradio-options
+    INTERFACE /Zc:preprocessor # conforming preprocessor, required for __VA_OPT__ (GR_MAKE_REFLECTABLE et al.)
+              /Zc:__cplusplus # report the real __cplusplus value rather than 199711L
+              /bigobj # required for sections larger than 2^16 (most GR template tus)
+              /utf-8
+              /external:W0 # required for /external:I
+              /external:env:INCLUDE # the STL and Windows SDK headers are external too
+              /vmg)
+  target_compile_definitions(
+    gnuradio-options
+    INTERFACE _CRT_SECURE_NO_WARNINGS _SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING)
+endif()
+
 if(EMSCRIPTEN)
   SetupEmscriptenGnuRadioOptions()
 endif()

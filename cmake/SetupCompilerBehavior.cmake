@@ -177,8 +177,10 @@ if((CMAKE_GENERATOR STREQUAL "Ninja" OR (CCACHE_PROGRAM AND USE_CCACHE)) AND NOT
   set(CMAKE_COLOR_DIAGNOSTICS ON)
 endif()
 
+# Keep third party header diagnostic warnings out of GR's builds
+option(DISABLE_EXTERNAL_DEPS_WARNINGS "Treat external dependency headers as SYSTEM includes" ON)
 set(CMAKE_EXT_DEP_WARNING_GUARD "")
-if(DISABLE_EXTERNAL_DEPS_WARNINGS) # enable warnings for external dependencies
+if(DISABLE_EXTERNAL_DEPS_WARNINGS)
   set(CMAKE_EXT_DEP_WARNING_GUARD SYSTEM)
 endif()
 

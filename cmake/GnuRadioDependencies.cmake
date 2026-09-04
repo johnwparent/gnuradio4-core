@@ -79,6 +79,9 @@ endfunction()
 function(DefineVirTarget)
   add_library(vir INTERFACE)
   add_library(gnuradio4::vir ALIAS vir)
+  if(MSVC)
+    target_compile_definitions(vir INTERFACE NOMINMAX)
+  endif()
   if(NOT FETCH)
     # the headers belong to whatever provides them, so carry only a build-time include path and stage nothing. an
     # interface file set is deliberately not used here: CMake refuses to export a target whose interface file sets are
