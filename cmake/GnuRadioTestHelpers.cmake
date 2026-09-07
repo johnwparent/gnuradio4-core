@@ -2,27 +2,27 @@ function(setup_test_no_asan TEST_NAME)
   target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_BINARY_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
   target_link_libraries(
     ${TEST_NAME}
-    PRIVATE gnuradio-options
-            gnuradio-core
-            gnuradio-blocklib-core
+    PRIVATE gnuradio4::gnuradio-options
+            gnuradio4::gnuradio-core
+            gnuradio4::gnuradio-blocklib-core
             ut
             ${GR_TEST_HELPER_LIBRARIES})
   # gnuradio-core's Graph/BlockModel/PluginLoader reference gr_plugin_base's out-of-line destructor,
   # which is only defined in gnuradio-plugin. Tests that reach that code need it on the link line.
-  if(TARGET gnuradio-plugin)
-    target_link_libraries(${TEST_NAME} PRIVATE gnuradio-plugin)
+  if(TARGET gnuradio4::gnuradio-plugin)
+    target_link_libraries(${TEST_NAME} PRIVATE gnuradio4::gnuradio-plugin)
   endif()
   if(MSVC)
     # boost.ut nests a lambda per test inside the suite lambda, and /Od gives every local its own slot,
     # so the frames get large. Windows reserves 1 MiB by default where Linux gives 8 MiB -- match Linux.
     target_link_options(${TEST_NAME} PRIVATE /STACK:8388608)
   endif()
-  add_test(NAME ${TEST_NAME} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${TEST_NAME})
+  add_test(NAME ${TEST_NAME} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${TEST_NAME}>)
   if(WIN32)
     # Windows has no RPATH: the loader locates the shared libraries the tests link against via PATH only.
-    set(_gr_test_dll_dirs "PATH=path_list_prepend:$<TARGET_FILE_DIR:gnuradio-blocklib-core>")
-    if(TARGET gnuradio-plugin)
-      list(APPEND _gr_test_dll_dirs "PATH=path_list_prepend:$<TARGET_FILE_DIR:gnuradio-plugin>")
+    set(_gr_test_dll_dirs "PATH=path_list_prepend:$<TARGET_FILE_DIR:gnuradio4::gnuradio-blocklib-core>")
+    if(TARGET gnuradio4::gnuradio-plugin)
+      list(APPEND _gr_test_dll_dirs "PATH=path_list_prepend:$<TARGET_FILE_DIR:gnuradio4::gnuradio-plugin>")
     endif()
     set_property(TEST ${TEST_NAME} APPEND PROPERTY ENVIRONMENT_MODIFICATION ${_gr_test_dll_dirs})
   endif()
@@ -46,5 +46,4 @@ function(add_ut_test TEST_NAME)
   if(_env)
     set_tests_properties(${TEST_NAME} PROPERTIES ENVIRONMENT "${_env}")
   endif()
-  target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_CURRENT_FUNCTION_LIST_DIR})
 endfunction()

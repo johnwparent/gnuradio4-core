@@ -13,4 +13,10 @@ if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/gnuradio4PluginTargets.cmake")
   include("${CMAKE_CURRENT_LIST_DIR}/gnuradio4PluginTargets.cmake")
 endif()
 
+# add_ut_test()/setup_test() for downstream test suites; requires a target named 'ut'
+# (Boost.UT) in the consuming project. Guarded so installs predating it still configure.
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/GnuRadioTestHelpers.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/GnuRadioTestHelpers.cmake")
+endif()
+
 check_required_components(gnuradio4)
