@@ -378,7 +378,7 @@ struct typelist {
     using apply = Other<Ts...>;
 
     template<class F, std::size_t... Is, typename... LeadingArguments>
-    static constexpr void for_each_impl(F&& f, std::index_sequence<Is...>, LeadingArguments&&... args) {
+    static constexpr void for_each_impl([[maybe_unused]] F&& f, std::index_sequence<Is...>, [[maybe_unused]] LeadingArguments&&... args) {
         (f(std::forward<LeadingArguments>(args)..., std::integral_constant<std::size_t, Is>{}, static_cast<Ts*>(nullptr)), ...);
     }
 
@@ -419,7 +419,7 @@ struct typelist {
 
     template<typename DefaultType>
     using safe_head_default = std::remove_pointer_t<decltype([] {
-        if constexpr (sizeof...(Ts) > 0) {
+        if constexpr (sizeof...(Ts) != 0UZ) {
             return static_cast<this_t::at<0>*>(nullptr);
         } else {
             return static_cast<DefaultType*>(nullptr);
@@ -427,7 +427,7 @@ struct typelist {
     }())>;
 
     using safe_head = std::remove_pointer_t<decltype([] {
-        if constexpr (sizeof...(Ts) > 0) {
+        if constexpr (sizeof...(Ts) != 0UZ) {
             return static_cast<this_t::at<0>*>(nullptr);
         } else {
             return static_cast<void*>(nullptr);

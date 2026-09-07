@@ -99,7 +99,7 @@ const boost::ut::suite AtomicBitsetTests = [] {
     "multithreads"_test = [] {
         constexpr std::size_t    bitsetSize = 256UZ;
         constexpr std::size_t    nThreads   = 16UZ;
-        constexpr std::size_t    nRepeats   = 100UZ;
+        [[maybe_unused]] constexpr std::size_t nRepeats = 100UZ; // used only inside the lambda below, so never captured
         AtomicBitset<bitsetSize> bitset;
         std::vector<std::thread> threads;
 

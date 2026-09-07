@@ -31,7 +31,7 @@ property_map serializeBlockImpl(gr::PluginLoader& pluginLoader, const std::share
         };
 
         // We don't have a use for info which parameters weren't applied here
-        const auto& applyResult = block->settings().applyStagedParameters();
+        [[maybe_unused]] const auto& applyResult = block->settings().applyStagedParameters();
         const auto& stored      = block->settings().getStoredAll();
 
         result.emplace(serialization_fields::BLOCK_PARAMETERS, writeParameters(block->settings().get()));

@@ -13,7 +13,11 @@
 #include <unordered_map>
 #include <variant>
 
+#ifdef _WIN32
+#include <process.h>
+#else
 #include <unistd.h>
+#endif
 
 #include <gnuradio-4.0/thread/thread_affinity.hpp>
 #include <gnuradio-4.0/thread/thread_pool.hpp>
@@ -23,6 +27,14 @@ namespace gr::profiling {
 using arg_value = std::pair<std::string, std::variant<std::string, int, double>>;
 
 namespace detail {
+
+[[nodiscard]] inline int currentProcessId() noexcept {
+#ifdef _WIN32
+    return ::_getpid();
+#else
+    return ::getpid();
+#endif
+}
 using clock      = std::chrono::high_resolution_clock;
 using time_point = clock::time_point;
 
@@ -327,13 +339,13 @@ public:
             if (options.output_mode == OutputMode::File) {
                 if (file_name.empty()) {
                     static int counter = 0;
-                    file_name          = std::format("profile.{}.{}.trace", getpid(), gr::atomic_ref(counter).fetch_add(1));
+                    file_name          = std::format("profile.{}.{}.trace", detail::currentProcessId(), gr::atomic_ref(counter).fetch_add(1));
                 }
                 out_file = std::ofstream(file_name, std::ios::out | std::ios::binary);
             }
 
             std::ostream& out_stream = options.output_mode == OutputMode::File ? out_file : std::cout;
-            const int     pid        = getpid();
+            const int     pid        = detail::currentProcessId();
 
             // assign numerical values to threads as we see them
             std::unordered_map<std::thread::id, int> mapped_threads;

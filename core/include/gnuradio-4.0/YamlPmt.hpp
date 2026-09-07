@@ -1248,6 +1248,14 @@ std::string serialize(const pmt::Value::Map& map) {
 
 inline std::expected<pmt::Value::Map, ParseError> deserialize(std::string_view yaml_str) {
     std::vector<std::string_view> lines = detail::split(yaml_str, "\n");
+    // YAML 1.2 (5.4 "Line Break Characters") treats CR LF as a single line break, so a document written
+    // with Windows line endings has to parse identically to one written with UNIX line endings. The views
+    // point into yaml_str, so trimming the CR is free.
+    for (std::string_view& line : lines) {
+        if (line.ends_with('\r')) {
+            line.remove_suffix(1UZ);
+        }
+    }
     detail::ParseContext          ctx{.lines = lines};
     ctx.consumeWhitespaceAndComments();
     ctx.consumeIfStartsWith("---");

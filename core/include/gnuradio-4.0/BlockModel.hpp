@@ -148,9 +148,9 @@ struct Edge {
     [[nodiscard]] property_map&       uiConstraints() noexcept { return *_uiConstraints; }
     [[nodiscard]] const property_map& uiConstraints() const { return *_uiConstraints; }
 
-    constexpr bool hasSameSourcePort(const Edge& other) const noexcept { return sourceBlock() == other.sourceBlock() && sourcePortDefinition().definition == other.sourcePortDefinition().definition; }
+    bool hasSameSourcePort(const Edge& other) const noexcept { return sourceBlock() == other.sourceBlock() && sourcePortDefinition().definition == other.sourcePortDefinition().definition; }
 
-    constexpr bool operator==(const Edge& other) const noexcept {
+    bool operator==(const Edge& other) const noexcept {
         return sourceBlock() == other.sourceBlock()                                                       //
                && destinationBlock() == other.destinationBlock()                                          //
                && sourcePortDefinition().definition == other.sourcePortDefinition().definition            //

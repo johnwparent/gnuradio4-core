@@ -62,7 +62,7 @@ struct BenchBlock : Block<BenchBlock> {
 
 template<typename T>
 inline void black_box(const T& v) {
-    asm volatile("" : : "g"(v) : "memory");
+    ::benchmark::force_store(v); // N.B. benchmark.hpp already has a portable spelling of the barrier
 }
 
 // ---- UT + Bench ---------------------------------------------------

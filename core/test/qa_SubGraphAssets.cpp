@@ -286,8 +286,9 @@ const boost::ut::suite AssetsLoadingTests = [] {
         // Recommended portable version:
         std::chrono::sys_days sys_tp = std::chrono::year{2019} / std::chrono::January / std::chrono::day{1};
 
-        // Convert sys_days → file_time_type without clock_cast
-        auto staleTime = std::chrono::file_clock::from_sys(sys_tp);
+        // Convert sys_days -> file_time_type. std::chrono::clock_cast is the portable spelling;
+        // file_clock::from_sys exists in libstdc++ but not in the MSVC STL.
+        auto staleTime = std::chrono::clock_cast<std::chrono::file_clock>(sys_tp);
 
         std::filesystem::last_write_time(cachePath, staleTime);
 
