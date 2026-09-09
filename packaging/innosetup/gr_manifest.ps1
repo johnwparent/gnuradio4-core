@@ -58,10 +58,26 @@ function ConvertTo-OrderedDictionary {
 }
 
 function Read-Manifest {
+    # -Repair moves an unparseable manifest aside so a fresh one can be written;
+    # reads that only report never mutate what is on disc
+    param([switch] $Repair)
+
     if (-not (Test-Path -LiteralPath $ManifestPath)) { return $null }
-    $raw = Get-Content -LiteralPath $ManifestPath -Raw
+    # the manifest is written as UTF-8 without a BOM; without -Encoding, Windows
+    # PowerShell decodes it as ANSI and mangles non-ASCII install paths
+    $raw = Get-Content -LiteralPath $ManifestPath -Raw -Encoding UTF8
     if ([string]::IsNullOrWhiteSpace($raw)) { return $null }
-    return ConvertTo-OrderedDictionary (ConvertFrom-Json $raw)
+
+    try {
+        return ConvertTo-OrderedDictionary (ConvertFrom-Json $raw)
+    } catch {
+        Add-ResultLine 'manifest-unreadable' '1'
+        if (-not $Repair) { return $null }
+        $corrupt = "$ManifestPath.corrupt"
+        Move-Item -LiteralPath $ManifestPath -Destination $corrupt -Force
+        Add-ResultLine 'manifest-replaced' $corrupt
+        return $null
+    }
 }
 
 function Write-Manifest {
@@ -127,7 +143,7 @@ function Invoke-Query {
 }
 
 function Invoke-Register {
-    $manifest = Read-Manifest
+    $manifest = Read-Manifest -Repair
     if ($null -eq $manifest) { $manifest = New-Manifest }
 
     $manifest['schema'] = $script:schemaVersion

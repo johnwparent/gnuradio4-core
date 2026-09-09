@@ -1,6 +1,8 @@
 set(CPACK_PACKAGE_VENDOR "GNU Radio")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GNU Radio 4 core runtime and SDK")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+# without this CPack substitutes its own placeholder licence into the installer
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_CONTACT "admin@gnuradio.org")
 if(NOT CPACK_PACKAGE_NAME)
   set(CPACK_PACKAGE_NAME "gnuradio4-core")

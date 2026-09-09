@@ -98,7 +98,10 @@ gr_install_artifact(FILES "${CMAKE_CURRENT_BINARY_DIR}/include/gnuradio-4.0/conf
 gr_install_artifact(
   TARGETS gnuradio-core gnuradio-blocklib-core
   EXPORT gnuradio4Targets
-  FILE_SET core_headers DESTINATION include/gnuradio-4.0)
+  FILE_SET core_headers DESTINATION include/gnuradio-4.0
+  COMPONENT CORE
+  HEADERS_COMPONENT DEVELOP
+  ARCHIVE_COMPONENT CORE)
 
 # Just install the entire include directory
 # Todo: this is redundant with the above fileset install/export, ensure we need both, and if so maybe drop the install and keep the export for the fileset (or include these)

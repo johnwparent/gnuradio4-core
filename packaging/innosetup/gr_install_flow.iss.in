@@ -30,6 +30,7 @@ var
   GrManifestLoaded: Boolean;
   GrManifestPresent: Boolean;
   GrManifestUnreadable: Boolean;
+  GrManifestToolFailed: Boolean;
   GrManifestEntries: TArrayOfString;
   GrInstallRoot: String;
   GrPluginRoot: String;
@@ -191,11 +192,13 @@ begin
   if not GrRunManifestTool('-Action query', Output) then
   begin
     { reported by the caller, which knows whether this is an install or an uninstall }
-    GrManifestUnreadable := FileExists(GrManifestPath());
+    GrManifestToolFailed := True;
     Exit;
   end;
 
   GrManifestEntries := Output;
+  { the manifest exists but is not valid JSON: register moves it aside and starts over }
+  GrManifestUnreadable := GrManifestValue('manifest-unreadable') = '1';
   GrManifestPresent := GrManifestValue('manifest-present') = '1';
   if not GrManifestPresent then
     Exit;
@@ -334,6 +337,8 @@ begin
   AppDataRoot := GrAppDataRoot();
   DeleteFile(AddBackslash(GrToolsDir()) + GrManifestToolName);
   RemoveDir(GrToolsDir());
+  { our own backup of an unparseable manifest, written by the repair path }
+  DeleteFile(GrManifestPath() + '.corrupt');
   RemoveDir(ExtractFileDir(GrManifestPath()));
   RemoveDir(AddBackslash(AppDataRoot) + 'manifest');
   RemoveDir(GrPluginRoot);
@@ -341,14 +346,38 @@ begin
   RemoveDir(AppDataRoot);
 end;
 
+function GrHasInstallDirOverride(): Boolean;
+begin
+  Result := Pos('/DIR=', Uppercase(GetCmdTail)) > 0;
+end;
+
 <event('InitializeSetup')>
 function GrInitializeSetup(): Boolean;
 begin
   GrLoadManifest();
-  if GrManifestUnreadable then
-    SuppressibleMsgBox('The GNU Radio 4 install manifest could not be read:' + GrEol + GrManifestPath() +
-      GrParagraph + 'Setup will continue with the default install locations and rewrite it.',
+
+  { neither problem may silently redirect the install }
+  if GrManifestToolFailed then
+    SuppressibleMsgBox('The GNU Radio 4 install manifest could not be inspected:' + GrEol + GrManifestPath() +
+      GrParagraph + 'Windows PowerShell is required. Setup will continue with the default install locations, ' +
+      'and other GR 4 packages may not find this installation.', mbError, MB_OK, IDOK)
+  else if GrManifestUnreadable then
+    SuppressibleMsgBox('The GNU Radio 4 install manifest is not valid JSON:' + GrEol + GrManifestPath() +
+      GrParagraph + 'It will be kept as manifest.json.corrupt and replaced with a new one describing the ' +
+      'default install locations.', mbError, MB_OK, IDOK);
+
+  { the recorded layout is shared by every GR 4 package, so a command line that
+    moves this one alone would silently split the installation in two }
+  if GrManifestPresent and GrHasInstallDirOverride() then
+  begin
+    SuppressibleMsgBox('GNU Radio 4 is already installed in:' + GrEol + GrInstallRoot + GrParagraph +
+      'That location is shared by every GR 4 package and recorded in:' + GrEol + GrManifestPath() +
+      GrParagraph + '/DIR cannot override it. Uninstall the existing packages first to choose a new location.',
       mbError, MB_OK, IDOK);
+    Result := False;
+    Exit;
+  end;
+
   Result := GrConfirmDowngrades();
 end;
 

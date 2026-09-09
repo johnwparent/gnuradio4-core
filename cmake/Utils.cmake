@@ -285,6 +285,10 @@ Args:
                         different components, which has to happen in one call
                         because CMake requires an exported target to install its
                         file sets alongside the export
+    ARCHIVE_COMPONENT - the install component for static libraries and, on
+                        Windows, import libraries, default is COMPONENT. Both
+                        are only needed to build against GR, so they usually
+                        belong with the headers rather than with the runtime
 
 Every other argument is forwarded to install() exactly as provided by the
 caller, so TARGETS, FILES, PROGRAMS, DIRECTORY, EXPORT, SCRIPT and FILE_SET all
@@ -301,12 +305,16 @@ interface libraries, files, directories, exports - has no runtime dependencies
 and skips that step.
 #]]
 function(gr_install_artifact)
-    cmake_parse_arguments("GR_INSTALL" "" "COMPONENT;HEADERS_COMPONENT;EXPORT" "TARGETS;DIRECTORY" ${ARGN})
+    cmake_parse_arguments("GR_INSTALL" "" "COMPONENT;HEADERS_COMPONENT;ARCHIVE_COMPONENT;EXPORT" "TARGETS;DIRECTORY"
+                          ${ARGN})
     if(NOT GR_INSTALL_COMPONENT)
         set(GR_INSTALL_COMPONENT "CORE")
     endif()
     if(NOT GR_INSTALL_HEADERS_COMPONENT)
         set(GR_INSTALL_HEADERS_COMPONENT "${GR_INSTALL_COMPONENT}")
+    endif()
+    if(NOT GR_INSTALL_ARCHIVE_COMPONENT)
+        set(GR_INSTALL_ARCHIVE_COMPONENT "${GR_INSTALL_COMPONENT}")
     endif()
     if(POLICY CMP0207)
         # match the runtime dependency exclude regexes against normalised paths
@@ -351,17 +359,21 @@ function(gr_install_artifact)
         if(NOT TARGET_TYPE MATCHES "^(EXECUTABLE|SHARED_LIBRARY|MODULE_LIBRARY)$")
             continue()
         endif()
-        _gr_runtime_dependency_excludes(RUNTIME_DEPENDENCY_EXCLUDES)
-        set(RUNTIME_DEPENDENCY_ARGS RUNTIME_DEPENDENCIES ${RUNTIME_DEPENDENCY_EXCLUDES})
+        # the RPATH is what makes any install runnable, packaged or not
         if(NOT WIN32)
             set_target_properties(${TARGET_NAME} PROPERTIES INSTALL_RPATH "${INSTALL_RPATH}")
         endif()
+        # bundling third-party libraries is only wanted when building a package
+        if(GR_PACKAGING)
+            _gr_runtime_dependency_excludes(RUNTIME_DEPENDENCY_EXCLUDES)
+            set(RUNTIME_DEPENDENCY_ARGS RUNTIME_DEPENDENCIES ${RUNTIME_DEPENDENCY_EXCLUDES})
+        endif()
     endforeach()
 
-    _gr_apply_headers_component(FORWARDED_ARGS "${GR_INSTALL_HEADERS_COMPONENT}" ${GR_INSTALL_UNPARSED_ARGUMENTS}).
+    _gr_apply_headers_component(FORWARDED_ARGS "${GR_INSTALL_HEADERS_COMPONENT}" ${GR_INSTALL_UNPARSED_ARGUMENTS})
     install(
         TARGETS ${GR_INSTALL_TARGETS} ${EXPORT_ARGS} ${RUNTIME_DEPENDENCY_ARGS} ${FORWARDED_ARGS}
         RUNTIME DESTINATION ${BIN_DEST} COMPONENT ${GR_INSTALL_COMPONENT}
         LIBRARY DESTINATION ${LIB_DEST} COMPONENT ${GR_INSTALL_COMPONENT}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${GR_INSTALL_COMPONENT})
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${GR_INSTALL_ARCHIVE_COMPONENT})
 endfunction()

@@ -15,7 +15,9 @@ if(NOT EMSCRIPTEN)
   gr_install_artifact(
     TARGETS gnuradio-plugin
     EXPORT gnuradio4PluginTargets
-    PUBLIC_HEADER DESTINATION include/gnuradio-4.0)
+    PUBLIC_HEADER DESTINATION include/gnuradio-4.0
+    COMPONENT CORE
+    HEADERS_COMPONENT DEVELOP)
 endif()
 
 if(ENABLE_EXAMPLES)

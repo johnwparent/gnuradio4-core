@@ -217,7 +217,7 @@ write_basic_package_version_file(
 gr_install_artifact(
     TARGETS magic_enum
     EXPORT gnuradio4Targets
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} HEADERS_COMPONENT DEVELOP)
 gr_install_artifact(TARGETS gnuradio-options EXPORT gnuradio4Targets COMPONENT DEVELOP)
 
 gr_install_artifact(
@@ -232,7 +232,8 @@ if(FETCH) # set by GnuRadioDependencies.cmake: EMSCRIPTEN OR GR_USE_FETCHCONTENT
     TARGETS vir
     EXPORT gnuradio4Targets
     FILE_SET HEADERS
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    HHEADERS_COMPONENT DEVELOP)
 else()
   gr_install_artifact(TARGETS vir EXPORT gnuradio4Targets)
 endif()
