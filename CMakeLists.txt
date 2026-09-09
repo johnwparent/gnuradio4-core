@@ -128,6 +128,7 @@ include(GNUInstallDirs)
 include(cmake/SetupCompilerBehavior.cmake)
 include(cmake/CompilerWarnings.cmake)
 include(cmake/Utils.cmake)
+include(cmake/GrInstall.cmake)
 if(ENABLE_TESTING)
   include(cmake/GnuRadioTestHelpers.cmake)
 endif()
@@ -246,6 +247,8 @@ if(TARGET gnuradio-plugin)
     DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
     COMPONENT DEVELOP)
 endif()
+
+gr_install_artifact(FILES "cmake/Utils.cmake" "cmake/GrInstall.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}" COMPONENT DEVELOP)
 
 gr_install_artifact(FILES "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4Config.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4ConfigVersion.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"

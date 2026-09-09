@@ -328,6 +328,35 @@ begin
     ManifestRemoved := GrValueOf(Output, 'manifest-removed') = '1';
 end;
 
+procedure GrRemoveEmptyDirTree(const Dir: String);
+var
+  SearchRec: TFindRec;
+  Children: TArrayOfString;
+  Count, Index: Integer;
+begin
+  { collect first: removing a subdirectory while enumerating its parent is not safe }
+  Count := 0;
+  SetArrayLength(Children, 0);
+  if FindFirst(AddBackslash(Dir) + '*', SearchRec) then
+  try
+    repeat
+      if ((SearchRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0) and
+         (SearchRec.Name <> '.') and (SearchRec.Name <> '..') then
+      begin
+        Count := Count + 1;
+        SetArrayLength(Children, Count);
+        Children[Count - 1] := AddBackslash(Dir) + SearchRec.Name;
+      end;
+    until not FindNext(SearchRec);
+  finally
+    FindClose(SearchRec);
+  end;
+
+  for Index := 0 to Count - 1 do
+    GrRemoveEmptyDirTree(Children[Index]);
+  RemoveDir(Dir);
+end;
+
 procedure GrPruneAppDataTree();
 var
   AppDataRoot: String;
@@ -428,5 +457,11 @@ begin
   end;
 
   if ManifestRemoved then
+  begin
     GrPruneAppDataTree();
+    { the shared prefix keeps the directories that whichever package installed
+      first created: no other uninstall log claims them, so nothing else removes
+      them. RemoveDir leaves anything still holding files alone. }
+    GrRemoveEmptyDirTree(RemoveBackslashUnlessRoot(ExpandConstant('{app}')));
+  end;
 end;
