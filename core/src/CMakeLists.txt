@@ -12,7 +12,7 @@ if(NOT EMSCRIPTEN)
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> $<INSTALL_INTERFACE:include/>)
   target_link_libraries(gnuradio-plugin PUBLIC gnuradio-core gnuradio-blocklib-core gnuradio-options)
 
-  install(
+  gr_install_artifact(
     TARGETS gnuradio-plugin
     EXPORT gnuradio4PluginTargets
     PUBLIC_HEADER DESTINATION include/gnuradio-4.0)

@@ -12,6 +12,15 @@ set(GR4_PKG_VERSION
     "${PROJECT_VERSION}-git"
     CACHE STRING "Version string used in gnuradio4.pc")
 
+# Plugin install paths are versioned by the plugin ABI, so plugins built against
+# different ABIs can be installed side by side. Read from the single source of truth.
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/core/include/gnuradio-4.0/Plugin.hpp" GR_PLUGIN_ABI_DEFINE
+     REGEX "^#define[ \t]+GR_PLUGIN_CURRENT_ABI_VERSION[ \t]+[0-9]+")
+string(REGEX MATCH "[0-9]+$" GR_PLUGIN_API_VERSION "${GR_PLUGIN_ABI_DEFINE}")
+if(NOT GR_PLUGIN_API_VERSION)
+  message(FATAL_ERROR "Could not read GR_PLUGIN_CURRENT_ABI_VERSION from core/include/gnuradio-4.0/Plugin.hpp")
+endif()
+
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
 # User facing GR Configuration Options
@@ -148,7 +157,7 @@ add_subdirectory(blocklib_generator)
 
 add_library(gnuradio-options INTERFACE)
 add_library(gnuradio4::gnuradio-options ALIAS gnuradio-options)
-install(TARGETS gnuradio-options EXPORT gnuradio4Targets)
+
 
 message(
   STATUS
@@ -189,8 +198,10 @@ if(TARGET gnuradio-plugin)
 endif()
 configure_file(cmake/gnuradio4.pc.in ${CMAKE_CURRENT_BINARY_DIR}/gnuradio4.pc @ONLY)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gnuradio4.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig # Standard location
-        # for .pc files
+gr_install_artifact(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/gnuradio4.pc 
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig # Standard location for .pc files
+  COMPONENT DEVELOP
 )
 
 set(GR_CMAKECONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/gnuradio4")
@@ -203,35 +214,50 @@ write_basic_package_version_file(
   VERSION "${GR4_PKG_VERSION}"
   COMPATIBILITY SameMajorVersion)
 
-install(
+gr_install_artifact(
+    TARGETS magic_enum
+    EXPORT gnuradio4Targets
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+gr_install_artifact(TARGETS gnuradio-options EXPORT gnuradio4Targets COMPONENT DEVELOP)
+
+gr_install_artifact(
   EXPORT gnuradio4Targets
   FILE gnuradio4Targets.cmake
   NAMESPACE gnuradio4::
-  DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}")
+  DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
+  COMPONENT DEVELOP)
 
 if(FETCH) # set by GnuRadioDependencies.cmake: EMSCRIPTEN OR GR_USE_FETCHCONTENT_DEPS
-  install(
+  gr_install_artifact(
     TARGETS vir
     EXPORT gnuradio4Targets
     FILE_SET HEADERS
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 else()
-  install(TARGETS vir EXPORT gnuradio4Targets)
+  gr_install_artifact(TARGETS vir EXPORT gnuradio4Targets)
 endif()
 
 if(TARGET gnuradio-plugin)
-  install(
+  gr_install_artifact(
     EXPORT gnuradio4PluginTargets
     FILE gnuradio4PluginTargets.cmake
     NAMESPACE gnuradio4::
-    DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}")
+    DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
+    COMPONENT DEVELOP)
 endif()
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4Config.cmake"
-              "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4ConfigVersion.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}")
+gr_install_artifact(FILES "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4Config.cmake"
+              "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4ConfigVersion.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
+              COMPONENT DEVELOP)
 
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GnuRadioTestHelpers.cmake"
-        DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}")
+gr_install_artifact(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GnuRadioTestHelpers.cmake"
+              "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GrInnoSetup.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
+              COMPONENT DEVELOP)
+
+# installer templates shared by every downstream GR installer
+gr_install_artifact(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/innosetup"
+        DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}/packaging"
+        COMPONENT DEVELOP)
 
 ReportConfigurationState()
 

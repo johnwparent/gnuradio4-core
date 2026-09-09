@@ -1,5 +1,8 @@
 @PACKAGE_INIT@
 
+# plugin API version that versions the shared plugin/manifest install paths
+set(GR_PLUGIN_API_VERSION "@GR_PLUGIN_API_VERSION@")
+
 include(CMakeFindDependencyMacro)
 
 # Optional transitive dependencies of exported targets.
@@ -17,6 +20,12 @@ endif()
 # (Boost.UT) in the consuming project. Guarded so installs predating it still configure.
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/GnuRadioTestHelpers.cmake")
   include("${CMAKE_CURRENT_LIST_DIR}/GnuRadioTestHelpers.cmake")
+endif()
+
+# gr_configure_innosetup_installer() so downstream GR projects build installers
+# that share the GR 4 install layout and manifest.
+if(WIN32 AND EXISTS "${CMAKE_CURRENT_LIST_DIR}/GrInnoSetup.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/GrInnoSetup.cmake")
 endif()
 
 check_required_components(gnuradio4)

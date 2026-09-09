@@ -1,0 +1,403 @@
+{
+  Shared GNU Radio 4 Windows installer flow.
+
+  Every GR4 installer (gr-core, gr-library, ... and the combined superbuild
+  installer) compiles this file into its [Code] section.  It gives them all
+  one install layout, described by a manifest under
+  %LOCALAPPDATA%\.gnuradio-4\manifest\v<api>\manifest.json:
+
+    - the first installer to run picks the layout and writes the manifest
+    - every later installer reuses that layout and only adds its own entries
+    - reinstalling or upgrading a component proceeds silently, downgrading
+      asks the user first
+
+  Configured by CMake, see cmake/GrInnoSetup.cmake.
+}
+
+const
+  GrApiVersion = '@GR_PLUGIN_API_VERSION@';
+  GrComponentPackages = '@GR_INSTALLER_COMPONENT_PACKAGES@';
+  GrPluginPackages = '@GR_INSTALLER_PLUGIN_PACKAGES@';
+  GrPreselectedComponents = '@GR_INSTALLER_PRESELECTED_COMPONENTS@';
+  GrManifestToolName = 'gr_manifest.ps1';
+  GrAppDataDirName = '.gnuradio-4';
+  GrInstallDirName = 'GnuRadio4';
+  { a line must never start with '#', the preprocessor would read it as a directive }
+  GrEol = #13#10;
+  GrParagraph = #13#10#13#10;
+
+var
+  GrManifestLoaded: Boolean;
+  GrManifestPresent: Boolean;
+  GrManifestUnreadable: Boolean;
+  GrManifestEntries: TArrayOfString;
+  GrInstallRoot: String;
+  GrPluginRoot: String;
+  GrManifestToolPath: String;
+  GrManifestToolResolved: Boolean;
+
+function GrAppDataRoot(): String;
+begin
+  Result := AddBackslash(ExpandConstant('{localappdata}')) + GrAppDataDirName;
+end;
+
+function GrToolsDir(): String;
+begin
+  Result := AddBackslash(GrAppDataRoot()) + 'tools';
+end;
+
+function GrManifestPath(): String;
+begin
+  Result := AddBackslash(GrAppDataRoot()) + 'manifest\v' + GrApiVersion + '\manifest.json';
+end;
+
+function GrDefaultPluginRoot(): String;
+begin
+  Result := AddBackslash(GrAppDataRoot()) + 'plugins\v' + GrApiVersion;
+end;
+
+function GrDefaultInstallRoot(): String;
+begin
+  Result := AddBackslash(ExpandConstant('{autopf}')) + GrInstallDirName;
+end;
+
+function GrSplit(const Text, Delimiter: String): TArrayOfString;
+var
+  Remaining: String;
+  SeparatorPos, Count: Integer;
+begin
+  SetArrayLength(Result, 0);
+  Remaining := Text;
+  Count := 0;
+  while Remaining <> '' do
+  begin
+    Count := Count + 1;
+    SetArrayLength(Result, Count);
+    SeparatorPos := Pos(Delimiter, Remaining);
+    if SeparatorPos = 0 then
+    begin
+      Result[Count - 1] := Remaining;
+      Remaining := '';
+    end
+    else
+    begin
+      Result[Count - 1] := Copy(Remaining, 1, SeparatorPos - 1);
+      Remaining := Copy(Remaining, SeparatorPos + Length(Delimiter), Length(Remaining));
+    end;
+  end;
+end;
+
+function GrEntryName(const Entry: String): String;
+var
+  SeparatorPos: Integer;
+begin
+  SeparatorPos := Pos('=', Entry);
+  if SeparatorPos = 0 then
+    Result := Entry
+  else
+    Result := Copy(Entry, 1, SeparatorPos - 1);
+end;
+
+function GrEntryValue(const Entry: String): String;
+var
+  SeparatorPos: Integer;
+begin
+  SeparatorPos := Pos('=', Entry);
+  if SeparatorPos = 0 then
+    Result := ''
+  else
+    Result := Copy(Entry, SeparatorPos + 1, Length(Entry));
+end;
+
+function GrValueOf(const Entries: TArrayOfString; const Key: String): String;
+var
+  Index: Integer;
+begin
+  Result := '';
+  for Index := 0 to GetArrayLength(Entries) - 1 do
+    if GrEntryName(Entries[Index]) = Key then
+    begin
+      Result := GrEntryValue(Entries[Index]);
+      Exit;
+    end;
+end;
+
+function GrManifestValue(const Key: String): String;
+begin
+  Result := GrValueOf(GrManifestEntries, Key);
+end;
+
+function GrResolveManifestTool(): String;
+begin
+  if GrManifestToolResolved then
+  begin
+    Result := GrManifestToolPath;
+    Exit;
+  end;
+  GrManifestToolResolved := True;
+
+  { the bundled copy is authoritative during setup; the uninstaller carries no
+    embedded files and falls back to the shared copy under %LOCALAPPDATA% }
+  try
+    ExtractTemporaryFile(GrManifestToolName);
+    GrManifestToolPath := ExpandConstant('{tmp}\' + GrManifestToolName);
+  except
+    GrManifestToolPath := '';
+  end;
+
+  if not FileExists(GrManifestToolPath) then
+  begin
+    GrManifestToolPath := AddBackslash(GrToolsDir()) + GrManifestToolName;
+    if not FileExists(GrManifestToolPath) then
+      GrManifestToolPath := '';
+  end;
+  Result := GrManifestToolPath;
+end;
+
+function GrRunManifestTool(const Arguments: String; var Output: TArrayOfString): Boolean;
+var
+  ToolPath, OutputPath, CommandLine: String;
+  ResultCode: Integer;
+begin
+  SetArrayLength(Output, 0);
+  ToolPath := GrResolveManifestTool();
+  if ToolPath = '' then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  OutputPath := ExpandConstant('{tmp}\gr_manifest_result.txt');
+  DeleteFile(OutputPath);
+  CommandLine := '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + ToolPath + '"' +
+    ' -ManifestPath "' + GrManifestPath() + '" -OutFile "' + OutputPath + '"' +
+    ' -ApiVersion "' + GrApiVersion + '" ' + Arguments;
+
+  Result := Exec('powershell.exe', CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+  LoadStringsFromFile(OutputPath, Output);
+end;
+
+procedure GrLoadManifest();
+var
+  Output: TArrayOfString;
+  Value: String;
+begin
+  if GrManifestLoaded then
+    Exit;
+  GrManifestLoaded := True;
+  GrInstallRoot := GrDefaultInstallRoot();
+  GrPluginRoot := GrDefaultPluginRoot();
+
+  if not GrRunManifestTool('-Action query', Output) then
+  begin
+    { reported by the caller, which knows whether this is an install or an uninstall }
+    GrManifestUnreadable := FileExists(GrManifestPath());
+    Exit;
+  end;
+
+  GrManifestEntries := Output;
+  GrManifestPresent := GrManifestValue('manifest-present') = '1';
+  if not GrManifestPresent then
+    Exit;
+
+  Value := GrManifestValue('install-root');
+  if Value <> '' then
+    GrInstallRoot := Value;
+  Value := GrManifestValue('plugin-root');
+  if Value <> '' then
+    GrPluginRoot := Value;
+end;
+
+function GrGetInstallRoot(Param: String): String;
+begin
+  GrLoadManifest();
+  Result := GrInstallRoot;
+end;
+
+function GrGetPluginRoot(Param: String): String;
+begin
+  GrLoadManifest();
+  Result := GrPluginRoot;
+end;
+
+function GrNormaliseVersion(const Version: String): String;
+var
+  SeparatorPos: Integer;
+begin
+  Result := Trim(Version);
+  SeparatorPos := Pos('-', Result);
+  if SeparatorPos > 0 then
+    Result := Copy(Result, 1, SeparatorPos - 1);
+  SeparatorPos := Pos('+', Result);
+  if SeparatorPos > 0 then
+    Result := Copy(Result, 1, SeparatorPos - 1);
+end;
+
+function GrCompareVersions(const Left, Right: String): Integer;
+var
+  LeftPacked, RightPacked: Int64;
+begin
+  if StrToVersion(GrNormaliseVersion(Left), LeftPacked) and StrToVersion(GrNormaliseVersion(Right), RightPacked) then
+    Result := ComparePackedVersion(LeftPacked, RightPacked)
+  else
+    Result := CompareText(Trim(Left), Trim(Right));
+end;
+
+function GrInstalledVersion(const Section, PackageName: String): String;
+begin
+  Result := GrManifestValue(Section + '.' + PackageName);
+end;
+
+function GrAnyPackageInstalled(const Packages, Section: String): Boolean;
+var
+  Entries: TArrayOfString;
+  Index: Integer;
+begin
+  Result := False;
+  Entries := GrSplit(Packages, '|');
+  for Index := 0 to GetArrayLength(Entries) - 1 do
+    if GrInstalledVersion(Section, GrEntryName(Entries[Index])) <> '' then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
+function GrPackageIsInstalled(): Boolean;
+begin
+  Result := GrAnyPackageInstalled(GrComponentPackages, 'component') or
+    GrAnyPackageInstalled(GrPluginPackages, 'plugin');
+end;
+
+function GrConfirmDowngradesIn(const Packages, Section: String): Boolean;
+var
+  Entries: TArrayOfString;
+  Index: Integer;
+  PackageName, InstalledVersion, PackagedVersion: String;
+begin
+  Result := True;
+  Entries := GrSplit(Packages, '|');
+  for Index := 0 to GetArrayLength(Entries) - 1 do
+  begin
+    PackageName := GrEntryName(Entries[Index]);
+    PackagedVersion := GrEntryValue(Entries[Index]);
+    InstalledVersion := GrInstalledVersion(Section, PackageName);
+    if (InstalledVersion = '') or (GrCompareVersions(InstalledVersion, PackagedVersion) <= 0) then
+      Continue;
+
+    Result := SuppressibleMsgBox(Format(
+      '%s %s is already installed, but this package contains the older version %s.' + GrParagraph +
+      'Installing it replaces the newer files and may break plugins built against %s.' + GrParagraph +
+      'Do you want to continue?', [PackageName, InstalledVersion, PackagedVersion, InstalledVersion]),
+      mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES;
+    if not Result then
+      Exit;
+  end;
+end;
+
+function GrConfirmDowngrades(): Boolean;
+begin
+  Result := GrConfirmDowngradesIn(GrComponentPackages, 'component') and
+    GrConfirmDowngradesIn(GrPluginPackages, 'plugin');
+end;
+
+function GrRegisterInManifest(): Boolean;
+var
+  Output: TArrayOfString;
+  Arguments: String;
+begin
+  Arguments := Format('-Action register -InstallRoot "%s" -PluginRoot "%s" -Components "%s" -Plugins "%s"', [
+    RemoveBackslashUnlessRoot(ExpandConstant('{app}')), RemoveBackslashUnlessRoot(GrPluginRoot),
+    GrComponentPackages, GrPluginPackages]);
+  Result := GrRunManifestTool(Arguments, Output);
+end;
+
+function GrUnregisterFromManifest(var ManifestRemoved: Boolean): Boolean;
+var
+  Output: TArrayOfString;
+  Arguments: String;
+begin
+  ManifestRemoved := False;
+  Arguments := Format('-Action unregister -Components "%s" -Plugins "%s"', [
+    GrComponentPackages, GrPluginPackages]);
+  Result := GrRunManifestTool(Arguments, Output);
+  if Result then
+    ManifestRemoved := GrValueOf(Output, 'manifest-removed') = '1';
+end;
+
+procedure GrPruneAppDataTree();
+var
+  AppDataRoot: String;
+begin
+  { only reached once the manifest is gone, so nothing else claims these paths.
+    RemoveDir refuses non-empty directories, which keeps user data safe. }
+  AppDataRoot := GrAppDataRoot();
+  DeleteFile(AddBackslash(GrToolsDir()) + GrManifestToolName);
+  RemoveDir(GrToolsDir());
+  RemoveDir(ExtractFileDir(GrManifestPath()));
+  RemoveDir(AddBackslash(AppDataRoot) + 'manifest');
+  RemoveDir(GrPluginRoot);
+  RemoveDir(AddBackslash(AppDataRoot) + 'plugins');
+  RemoveDir(AppDataRoot);
+end;
+
+<event('InitializeSetup')>
+function GrInitializeSetup(): Boolean;
+begin
+  GrLoadManifest();
+  if GrManifestUnreadable then
+    SuppressibleMsgBox('The GNU Radio 4 install manifest could not be read:' + GrEol + GrManifestPath() +
+      GrParagraph + 'Setup will continue with the default install locations and rewrite it.',
+      mbError, MB_OK, IDOK);
+  Result := GrConfirmDowngrades();
+end;
+
+<event('InitializeWizard')>
+procedure GrInitializeWizard();
+begin
+  if (GrPreselectedComponents <> '') and not GrPackageIsInstalled() and
+     (Pos('/COMPONENTS=', Uppercase(GetCmdTail)) = 0) then
+    WizardSelectComponents(GrPreselectedComponents);
+end;
+
+<event('ShouldSkipPage')>
+function GrShouldSkipPage(PageID: Integer): Boolean;
+begin
+  { the layout is fixed once any GR4 package has been installed }
+  Result := (PageID = wpSelectDir) and GrManifestPresent;
+end;
+
+<event('CurStepChanged')>
+procedure GrCurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep <> ssPostInstall then
+    Exit;
+  if not GrRegisterInManifest() then
+    SuppressibleMsgBox('The files were installed, but the GNU Radio 4 install manifest could not be updated:' +
+      GrEol + GrManifestPath() + GrParagraph + 'Plugin installers may not find this installation.',
+      mbError, MB_OK, IDOK);
+end;
+
+<event('CurUninstallStepChanged')>
+procedure GrCurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ManifestRemoved: Boolean;
+begin
+  if CurUninstallStep <> usPostUninstall then
+    Exit;
+
+  { plugins may deliberately outlive the runtime, so the manifest keeps the
+    recorded layout until its last entry is gone and a later reinstall of this
+    package lands in the same place without asking again }
+  GrLoadManifest();
+  if not GrUnregisterFromManifest(ManifestRemoved) then
+  begin
+    SuppressibleMsgBox('The GNU Radio 4 install manifest still lists this package as installed:' + GrEol +
+      GrManifestPath() + GrParagraph + 'Remove the entry by hand, otherwise the next installer will treat this ' +
+      'package as still present.', mbError, MB_OK, IDOK);
+    Exit;
+  end;
+
+  if ManifestRemoved then
+    GrPruneAppDataTree();
+end;
