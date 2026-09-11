@@ -243,16 +243,17 @@ gr_install_artifact(
   DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
   COMPONENT DEVELOP)
 
-if(FETCH) # set by GnuRadioDependencies.cmake: EMSCRIPTEN OR GR_USE_FETCHCONTENT_DEPS
-  gr_install_artifact(
-    TARGETS vir
-    EXPORT gnuradio4Targets
-    FILE_SET HEADERS
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    HEADERS_COMPONENT DEVELOP)
-else()
-  gr_install_artifact(TARGETS vir EXPORT gnuradio4Targets)
-endif()
+# DefineVirTarget() always attaches a header file set, whether vir-simd was fetched or found, so
+# the install has to carry it in both cases: CMake refuses to export a target whose interface file
+# sets are not installed. Staging the headers is also what makes the installed prefix
+# self-contained -- a found vir-simd otherwise leaves gnuradio4::vir with no include directory a
+# consumer can use, and the prefix silently depending on the provider's tree.
+gr_install_artifact(
+  TARGETS vir
+  EXPORT gnuradio4Targets
+  FILE_SET HEADERS
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  HEADERS_COMPONENT DEVELOP)
 
 if(TARGET gnuradio-plugin)
   gr_install_artifact(
