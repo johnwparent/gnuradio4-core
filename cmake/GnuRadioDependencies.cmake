@@ -26,16 +26,13 @@ function(DefineVirTarget)
   if(MSVC)
     target_compile_definitions(vir INTERFACE NOMINMAX)
   endif()
-  set(_vir_headers
-      simd.h
-      simdize.h
-      simd_version.h
-      simd_concepts.h
-      simd_permute.h
-      detail.h
-      constexpr_wrapper.h
-      struct_reflect.h)
-  list(TRANSFORM _vir_headers PREPEND "${vir-simd_SOURCE_DIR}/vir/")
+  # every header vir-simd ships, rather than a hand-maintained closure of the ones GR4 includes
+  # directly. vir-simd is header-only and small, so staging all of it costs nothing, and a curated
+  # list silently omits whatever a downstream project includes that core does not: the list this
+  # replaced covered <vir/simd.h> and <vir/simdize.h> but not <vir/simd_execution.h>, which
+  # gnuradio4Library's SimdFFT.hpp includes, so an installed prefix was missing it.
+  file(GLOB _vir_headers CONFIGURE_DEPENDS "${vir-simd_SOURCE_DIR}/vir/*.h")
+  list(SORT _vir_headers)
   target_sources(vir
     INTERFACE
     FILE_SET HEADERS
