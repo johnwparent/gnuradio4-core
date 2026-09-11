@@ -157,25 +157,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
   endif()
 endif()
 
-# Use ccache if found and enabled
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM AND USE_CCACHE)
-  message(STATUS "ccache found and will be used")
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-else()
-  message(STATUS "ccache will not be used")
-endif()
-
-# Prefer forced colored compiler output if there's a chance we'd otherwise get none at all. Ninja and ccache "consume"
-# the compiler output, breaking the terminal detection of compilers. ccache tries to solve the problem, but can only do
-# so if it determines that it's calling GCC or Clang. It uses a very lightweight heuristic, which breaks easily.
-if((CMAKE_GENERATOR STREQUAL "Ninja" OR (CCACHE_PROGRAM AND USE_CCACHE)) AND NOT DEFINED CMAKE_COLOR_DIAGNOSTICS)
-  message(
-    STATUS
-      "Forcing compiler color output due to the use of Ninja and/or ccache. Use -DCMAKE_COLOR_DIAGNOSTICS=OFF to turn it off."
-  )
-  set(CMAKE_COLOR_DIAGNOSTICS ON)
-endif()
 
 # Keep third party header diagnostic warnings out of GR's builds
 option(DISABLE_EXTERNAL_DEPS_WARNINGS "Treat external dependency headers as SYSTEM includes" ON)
@@ -258,11 +239,4 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "(Clang|GNU)")
     add_link_options(${SANITIZER_FLAGS})
     message(STATUS "Enabled sanitizer flags: ${SANITIZER_FLAGS}")
   endif()
-endif()
-
-# Include What You Use tooling: https://github.com/include-what-you-use/include-what-you-use
-find_program(INCLUDE_WHAT_YOU_USE_TOOL_PATH NAMES include-what-you-use iwyu)
-if(INCLUDE_WHAT_YOU_USE_TOOL_PATH)
-  message(" using 'Include What You Use' path: (${INCLUDE_WHAT_YOU_USE_TOOL_PATH})")
-  set_property(GLOBAL PROPERTY CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${INCLUDE_WHAT_YOU_USE_TOOL_PATH})
 endif()

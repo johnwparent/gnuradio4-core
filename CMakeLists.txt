@@ -249,7 +249,7 @@ if(FETCH) # set by GnuRadioDependencies.cmake: EMSCRIPTEN OR GR_USE_FETCHCONTENT
     EXPORT gnuradio4Targets
     FILE_SET HEADERS
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    HHEADERS_COMPONENT DEVELOP)
+    HEADERS_COMPONENT DEVELOP)
 else()
   gr_install_artifact(TARGETS vir EXPORT gnuradio4Targets)
 endif()
@@ -263,7 +263,7 @@ if(TARGET gnuradio-plugin)
     COMPONENT DEVELOP)
 endif()
 
-gr_install_artifact(FILES "cmake/Utils.cmake" "cmake/GrInstall.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}" COMPONENT DEVELOP)
+gr_install_artifact(FILES "cmake/Utils.cmake" "cmake/GrInstall.cmake" "cmake/GNURadioSharedDependencies.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}" COMPONENT DEVELOP)
 
 gr_install_artifact(FILES "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4Config.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4ConfigVersion.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
