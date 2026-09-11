@@ -1,4 +1,4 @@
-include(GNURadioSharedDependencies)
+include("${CMAKE_CURRENT_LIST_DIR}/GNURadioSharedDependencies.cmake")
 
 function(ObtainOrFindVirSIMD)
   if(FETCH)
