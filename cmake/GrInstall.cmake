@@ -11,6 +11,14 @@ function(_gr_runtime_dependency_excludes OUT_VAR)
         "^/usr/local/lib"
         "^/System/Library"
         "^/usr/lib/libSystem"
+        # Homebrew, where a macOS build gets its LLVM runtime. Bundling these
+        # would copy the dylibs in without rewriting any install name, so the
+        # binaries would still load the originals from /opt/homebrew and the
+        # copies would be dead weight. Excluding them is coherent; making the
+        # package self-contained needs an install_name_tool fixup step that does
+        # not exist yet, so a macOS package currently expects Homebrew LLVM.
+        "^/opt/homebrew"
+        "^/usr/local/opt"
         "^[Cc]:[\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss]"
         POST_EXCLUDE_REGEXES
         ".*[Ss][Yy][Ss][Tt][Ee][Mm]32.*"
@@ -115,7 +123,17 @@ function(gr_install_artifact)
         set(BIN_DEST "bin")
         set(LIB_DEST "lib")
         if(APPLE)
-            set(INSTALL_RPATH "@executable_path/../lib")
+            # @loader_path, not @executable_path: for an executable the two are
+            # identical, but @executable_path resolves against whatever process
+            # loaded a .dylib, so a plugin dlopen()ed by a host outside the
+            # prefix would look for its siblings next to that host and not find
+            # them. @loader_path always resolves against the binary that carries
+            # the RPATH.
+            #
+            # This still only covers artifacts installed under the prefix. A
+            # plugin installed into the shared plugin tree needs an absolute
+            # RPATH into <install-root>/lib, which nothing sets yet.
+            set(INSTALL_RPATH "@loader_path/../lib")
         else()
             set(INSTALL_RPATH "$ORIGIN/../lib")
         endif()

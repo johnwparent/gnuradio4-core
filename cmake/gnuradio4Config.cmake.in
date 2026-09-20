@@ -36,6 +36,12 @@ endif()
 if(WIN32 AND EXISTS "${CMAKE_CURRENT_LIST_DIR}/GrInnoSetup.cmake")
   include("${CMAKE_CURRENT_LIST_DIR}/GrInnoSetup.cmake")
 endif()
+
+# gr_configure_productbuild_installer(), the macOS counterpart. Guarded the same
+# way so installs predating it still configure.
+if(APPLE AND EXISTS "${CMAKE_CURRENT_LIST_DIR}/GrProductBuild.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/GrProductBuild.cmake")
+endif()
 include("${CMAKE_CURRENT_LIST_DIR}/GrInstall.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Utils.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/GNURadioSharedDependencies.cmake")

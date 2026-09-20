@@ -272,13 +272,23 @@ gr_install_artifact(FILES "${CMAKE_CURRENT_BINARY_DIR}/gnuradio4Config.cmake"
               COMPONENT DEVELOP)
 
 gr_install_artifact(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GnuRadioTestHelpers.cmake"
-              "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GrInnoSetup.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
+              "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GrInnoSetup.cmake"
+              "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GrProductBuild.cmake" DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}"
               COMPONENT DEVELOP)
 
-# installer templates shared by every downstream GR installer
+# installer templates shared by every downstream GR installer. Both trees are
+# installed on every platform: the superbuild reads them back out of the install
+# prefix, and which one it needs is decided there, not here.
 gr_install_artifact(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/innosetup"
         DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}/packaging"
         COMPONENT DEVELOP)
+
+# USE_SOURCE_PERMISSIONS keeps the shell scripts executable: pkgbuild refuses a
+# --scripts directory whose preinstall or postinstall cannot be run
+gr_install_artifact(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/productbuild"
+        DESTINATION "${GR_CMAKECONFIG_INSTALL_DIR}/packaging"
+        COMPONENT DEVELOP
+        USE_SOURCE_PERMISSIONS)
 
 ReportConfigurationState()
 

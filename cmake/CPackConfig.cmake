@@ -22,7 +22,9 @@ cpack_add_component(
 cpack_add_component(DEVELOP DISPLAY_NAME "Development files"
                     DESCRIPTION "Headers, import libraries and CMake/pkg-config files needed to build against GR 4")
 
-if(UNIX)
+# APPLE implies UNIX, so macOS must be excluded here or it selects the Debian
+# generator and `--target package` tries to build a .deb on a Mac.
+if(UNIX AND NOT APPLE)
   if(NOT CPACK_GENERATOR)
     set(CPACK_GENERATOR "DEB")
   endif()
@@ -35,6 +37,30 @@ if(UNIX)
   if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     set(CPACK_DEBIAN_DEBUGINFO_PACKAGE ON)
   endif()
+endif()
+
+if(APPLE)
+  set(CPACK_GENERATOR "productbuild")
+  # without an explicit list CPack builds a monolithic package and the component
+  # selection the unified installer is built around is lost
+  set(CPACK_COMPONENTS_ALL CORE DEVELOP Unspecified)
+
+  include("${CMAKE_CURRENT_LIST_DIR}/GrProductBuild.cmake")
+  # the identifier identifies gr-core to pkgutil across releases: never reuse it
+  # in another GR installer and never change it between versions
+  gr_configure_productbuild_installer(
+    IDENTIFIER
+    "org.gnuradio.gr4.core"
+    PACKAGES
+    "gr-core=${CPACK_PACKAGE_VERSION}"
+    REGISTER_COMPONENT
+    CORE
+    PRESELECTED_COMPONENTS
+    CORE
+    DEVELOP)
+  # gr-core owns the shared layout, so it ships the one uninstaller that serves
+  # every GR 4 package
+  gr_install_productbuild_uninstaller(COMPONENT CORE)
 endif()
 
 if(WIN32)
