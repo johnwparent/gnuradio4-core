@@ -21,7 +21,7 @@ const
   GrPreselectedComponents = '@GR_INSTALLER_PRESELECTED_COMPONENTS@';
   GrManifestToolName = 'gr_manifest.ps1';
   GrAppDataDirName = '.gnuradio-4';
-  GrInstallDirName = 'GnuRadio4';
+  GrInstallDirName = 'GNURadio4';
   { a line must never start with '#', the preprocessor would read it as a directive }
   GrEol = #13#10;
   GrParagraph = #13#10#13#10;

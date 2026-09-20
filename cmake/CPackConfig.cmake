@@ -45,13 +45,16 @@ if(WIN32)
   # fallback only: gr_configure_innosetup_installer() takes the install root from
   # the shared manifest when a GR 4 installation already exists
   set(CPACK_INNOSETUP_INSTALL_ROOT "{autopf}")
-  set(CPACK_PACKAGE_INSTALL_DIRECTORY "GnuRadio4")
+  set(CPACK_PACKAGE_INSTALL_DIRECTORY "GNURadio4")
   # This needs to be the same for all GR component installs
   # so we allow it to be configurable
   if(NOT GR_START_MENU)
-    set(GR_START_MENU "GnuRadio 4.0")
+    set(GR_START_MENU "GNURadio 4.0")
   endif()
   set(CPACK_INNOSETUP_PROGRAM_MENU_FOLDER ${GR_START_MENU})
+  # without an explicit list CPack builds a monolithic installer and ignores
+  # /COMPONENTS, which the superbuild installer uses to select DEVELOP
+  set(CPACK_COMPONENTS_ALL CORE DEVELOP Unspecified)
 
   include("${CMAKE_CURRENT_LIST_DIR}/GrInnoSetup.cmake")
   # the AppId identifies gr-core to Windows across releases: never reuse it in

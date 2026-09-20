@@ -177,7 +177,8 @@ if(MSVC)
               /utf-8
               /external:W0 # required for /external:I
               /external:env:INCLUDE # the STL and Windows SDK headers are external too
-              /vmg)
+              /vmg
+              /EHsc)
   target_compile_definitions(
     gnuradio-options
     INTERFACE _CRT_SECURE_NO_WARNINGS _SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING)

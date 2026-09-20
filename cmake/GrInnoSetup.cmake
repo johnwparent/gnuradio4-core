@@ -5,7 +5,7 @@ Every GR project that ships an Inno Setup installer (gr-core, gr-library, ...
 and the combined superbuild installer) configures it through this module so
 that they all agree on one install layout:
 
-    %LOCALAPPDATA%\Programs\GnuRadio4          runtime libraries and headers (user-selectable)
+    %LOCALAPPDATA%\Programs\GNURadio4          runtime libraries and headers (user-selectable)
     %LOCALAPPDATA%\.gnuradio-4\plugins\v<api>  plugins
     %LOCALAPPDATA%\.gnuradio-4\manifest\v<api> the manifest describing both roots
     %LOCALAPPDATA%\.gnuradio-4\tools           the manifest maintenance script

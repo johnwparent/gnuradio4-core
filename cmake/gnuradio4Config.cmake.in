@@ -14,6 +14,15 @@ include("${CMAKE_CURRENT_LIST_DIR}/gnuradio4Targets.cmake")
 
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/gnuradio4PluginTargets.cmake")
   include("${CMAKE_CURRENT_LIST_DIR}/gnuradio4PluginTargets.cmake")
+
+  # gnuradio-core's Graph/BlockModel/PluginLoader reference gr_plugin_base's out-of-line
+  # destructor, which only gnuradio-plugin defines, so every consumer of gnuradio-core needs
+  # gnuradio-plugin on its link line. It cannot be declared with target_link_libraries() in the
+  # build tree: gnuradio-plugin already links gnuradio-core PUBLIC, and CMake permits a link
+  # cycle only between static libraries. Imported targets are exempt from that check, so the
+  # link interface is completed here, once both export sets are loaded.
+  set_property(TARGET gnuradio4::gnuradio-core APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                                                               gnuradio4::gnuradio-plugin)
 endif()
 
 # add_ut_test()/setup_test() for downstream test suites; requires a target named 'ut'

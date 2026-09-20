@@ -99,6 +99,7 @@ gr_install_artifact(
   TARGETS gnuradio-core gnuradio-blocklib-core
   EXPORT gnuradio4Targets
   FILE_SET core_headers DESTINATION include/gnuradio-4.0
+  PUBLIC_HEADER DESTINATION include/gnuradio-4.0
   COMPONENT CORE
   HEADERS_COMPONENT DEVELOP
   ARCHIVE_COMPONENT CORE)
